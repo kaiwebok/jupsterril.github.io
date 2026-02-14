@@ -70,11 +70,49 @@ async function handleSend() {
         typingIndicator.classList.add('hidden');
 
         if (result.error) {
-            let errorMsg = result.error;
-            if (typeof result.error === 'object') {
-                errorMsg = result.error.message || JSON.stringify(result.error);
+            // Normalize possible error shapes
+            const errObj = (typeof result.error === 'object') ? result.error : { message: String(result.error) };
+            const code = errObj.code || errObj.status || errObj.error || null;
+            const msg = errObj.message || errObj.error_description || String(errObj);
+
+            // Map common error codes/statuses to friendly AI responses
+            let botReply;
+            switch (String(code).toLowerCase()) {
+                case '401':
+                case 'unauthorized':
+                case 'invalid_api_key':
+                    botReply = "yo i can't access my brain rn — looks like an auth problem, ngl. try checking the api key.";
+                    break;
+                case '403':
+                case 'forbidden':
+                    botReply = "i wanna help but i'm blocked from that resource. maybe permissions are funky.";
+                    break;
+                case '429':
+                case 'rate_limit_exceeded':
+                case 'too_many_requests':
+                    botReply = "whoa slow down — i'm getting hammered. try again in a sec, k?";
+                    break;
+                case '500':
+                case 'internal_server_error':
+                    botReply = "my server-side brain's shorting out rn. try again later, sry!";
+                    break;
+                case '503':
+                case 'service_unavailable':
+                    botReply = "service's taking a nap. i'll be back when it's up — try again soon.";
+                    break;
+                case 'network':
+                case 'network_error':
+                    botReply = "network's being sus rn — check your connection and try again.";
+                    break;
+                default:
+                    // Fallback uses provided message (kept concise)
+                    botReply = msg ? `hmm i hit an error: ${msg}` : "something weird happened, i couldn't get a reply.";
             }
-            appendMessage('system', `ERROR: ${errorMsg}`);
+
+            // Append as the AI speaking about the error
+            appendMessage('ai', botReply);
+            // Also log full error object for debugging
+            console.warn('AI API error:', errObj);
         } else if (result.candidates && result.candidates[0].content) {
             const responseText = result.candidates[0].content.parts[0].text;
             appendMessage('ai', responseText);
@@ -111,4 +149,4 @@ initHistory();
 
 // Sanitize console on start
 console.log("%c SECURITY OVERRIDE ACTIVE ", "background: red; color: white; font-weight: bold;");
-console.log("Memory protection enabled. DevTools monitoring active.");
+console.log("WATCHU DOIN HERE BROCHACHO");
